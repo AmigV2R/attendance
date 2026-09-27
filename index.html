@@ -3,23 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Feuille de présence</title>
+<title>Sélection de classe</title>
 
 <style>
 body{
-    font-family: Arial, sans-serif;
+    font-family:Arial,sans-serif;
     margin:20px;
 }
-h2{
-    text-align:center;
-}
-.person{
+select,button{
+    width:100%;
+    padding:12px;
     margin:10px 0;
+    font-size:18px;
 }
 button{
-    width:100%;
-    padding:15px;
-    font-size:18px;
     background:#25D366;
     color:white;
     border:none;
@@ -29,42 +26,62 @@ button{
 </head>
 <body>
 
-<h2>Absences du jour</h2>
+<h2>Choisir une classe</h2>
 
-<div class="person"><label><input type="checkbox" value="Jean"> Jean</label></div>
-<div class="person"><label><input type="checkbox" value="Marie"> Marie</label></div>
-<div class="person"><label><input type="checkbox" value="Pierre"> Pierre</label></div>
-<div class="person"><label><input type="checkbox" value="Sophie"> Sophie</label></div>
-<div class="person"><label><input type="checkbox" value="Lucas"> Lucas</label></div>
-<div class="person"><label><input type="checkbox" value="Emma"> Emma</label></div>
-<div class="person"><label><input type="checkbox" value="ahmad"> alma</label></div>
+<select id="teacher">
+    <option value="">Choisir l'enseignant</option>
+    <option>لبنى</option>
+    <option>نور</option>
+    <option>نيفين</option>
+    <option>زينة</option>
+    <option>حليمة</option>
+    <option>سماح</option>
+    <option>مروة</option>
+    <option>دانا د</option>
+    <option>رشا ق</option>
+    <option>رهف</option>
+    <option>رولا</option>
+    <option>صفاء</option>
+</select>
 
-<button onclick="envoyer()">Envoyer par WhatsApp</button>
+<select id="classe">
+    <option value="">Choisir la classe</option>
+    <option>روضة</option>
+    <option>تحضيري</option>
+    <option>روضة تحضيري</option>
+    <option>الأول</option>
+    <option>الثاني</option>
+    <option>الثالث</option>
+    <option>الرابع</option>
+    <option>الخامس</option>
+    <option>السادس</option>
+    <option>السابع</option>
+    <option>أول ثانوي</option>
+    <option>أول كبار</option>
+    <option>الثاني كبار</option>
+    <option>الثالث كبار</option>
+</select>
+
+<button onclick="ouvrirPresence()">
+    Continuer
+</button>
 
 <script>
-function envoyer() {
+function ouvrirPresence(){
 
-    let absents = [];
+    const teacher =
+        document.getElementById("teacher").value;
 
-    document.querySelectorAll('input[type=checkbox\]:checked')
-        .forEach(cb => absents.push(cb.value));
+    const classe =
+        document.getElementById("classe").value;
 
-    let message;
-
-    if(absents.length === 0){
-        message = "Aucune absence aujourd'hui.";
-    } else {
-        message = "Absents aujourd'hui :\n- " +
-                  absents.join("\n- ");
+    if(!teacher || !classe){
+        alert("Choisissez la classe et l'enseignant.");
+        return;
     }
 
-    const numero = "33603151232"; // numéro destinataire
-
     window.location.href =
-        "https://wa.me/" +
-        numero +
-        "?text=" +
-        encodeURIComponent(message);
+        `presence.html?teacher=${encodeURIComponent(teacher)}&class=${encodeURIComponent(classe)}`;
 }
 </script>
 
