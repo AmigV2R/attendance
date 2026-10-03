@@ -1,5 +1,81 @@
-<!DOCTYPE html><html lang="fr" dir="auto"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Feuille de présence</title><style>body{font-family:Arial,sans-serif;max-width:650px;margin:20px auto;padding:16px;background:#f5f5f5}.card{background:#fff;padding:20px;border-radius:14px}h2{text-align:center}.meta{text-align:center;color:#555;margin-bottom:18px}.person{padding:12px;border-bottom:1px solid #eee;font-size:18px}.person input{transform:scale(1.35);margin:0 10px}button{width:100%;padding:15px;font-size:18px;background:#25D366;color:white;border:0;border-radius:8px;margin-top:20px}.back{display:block;margin-bottom:15px;color:#1f6feb;text-decoration:none}</style></head><body><div class="card"><a class="back" href="index.html">← Retour</a><h2>Absences du jour</h2><div id="meta" class="meta"></div><div id="students">Chargement...</div><button onclick="envoyer()">Envoyer par WhatsApp</button></div><script>
-const q=new URLSearchParams(location.search),teacher=q.get('teacher')||'',className=q.get('class')||'';document.getElementById('meta').textContent=`${teacher} — ${className}`;
-fetch('students.json').then(r=>r.json()).then(data=>{const list=data.filter(x=>x.teacher===teacher&&x.class===className);document.getElementById('students').innerHTML=list.length?list.map(s=>`<div class="person"><label><input type="checkbox" value="${s.name.replaceAll('&','&amp;').replaceAll('"','&quot;')}"> ${s.name}</label></div>`).join(''):'Aucun élève trouvé.';});
-function envoyer(){const absents=[...document.querySelectorAll('input[type=checkbox]:checked')].map(x=>x.value);const date=new Date().toLocaleDateString('fr-FR');let message=`Absences - ${className}\nProfesseur : ${teacher}\nDate : ${date}\n\n`;message+=absents.length?'Absents :\n- '+absents.join('\n- '):"Aucune absence aujourd'hui.";const numero='33603151232';location.href='https://wa.me/'+numero+'?text='+encodeURIComponent(message);}
-</script></body></html>
+<!DOCTYPE html>
+<html lang="fr" dir="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feuille de présence</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:650px;margin:20px auto;padding:16px;background:#f5f5f5;color:#222}
+.card{background:#fff;padding:20px;border-radius:14px;box-shadow:0 2px 8px #00000012}
+h2,h3{text-align:center}.meta{text-align:center;color:#555;margin-bottom:18px}.person{padding:12px;border-bottom:1px solid #eee;font-size:18px}.person input{transform:scale(1.35);margin:0 10px}.mainbtn,.wa-btn{display:block;width:100%;box-sizing:border-box;padding:15px;font-size:18px;background:#25D366;color:white;border:0;border-radius:8px;margin-top:20px;text-align:center;text-decoration:none;cursor:pointer}.back{display:block;margin-bottom:15px;color:#1f6feb;text-decoration:none}.family{margin-top:14px;padding:14px;border:1px solid #ddd;border-radius:10px;background:#fafafa}.family strong{display:block;margin-bottom:5px}.family .wa-btn{margin-top:10px}.warning{margin-top:15px;padding:12px;background:#fff3cd;border-radius:8px;color:#664d03}.hidden{display:none}.sent{opacity:.55}.sent .wa-btn{background:#777}.small{font-size:14px;color:#666;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="card">
+<a class="back" href="index.html">← Retour</a>
+<h2>Absences du jour</h2>
+<div id="meta" class="meta"></div>
+<div id="students">Chargement...</div>
+<button id="prepareBtn" class="mainbtn" onclick="preparerMessages()">Préparer les messages WhatsApp</button>
+<div id="messages" class="hidden"></div>
+</div>
+<script>
+const q=new URLSearchParams(location.search);
+const teacher=q.get('teacher')||'';
+const className=q.get('class')||'';
+let currentStudents=[];
+
+document.getElementById('meta').textContent=`${teacher} — ${className}`;
+
+function esc(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
+function normalizePhone(p){return String(p||'').replace(/[^0-9]/g,'');}
+
+fetch('students.json')
+ .then(r=>{if(!r.ok) throw new Error('students.json introuvable'); return r.json();})
+ .then(data=>{
+   currentStudents=data.filter(x=>x.teacher===teacher&&x.class===className);
+   document.getElementById('students').innerHTML=currentStudents.length
+    ? currentStudents.map((s,i)=>`<div class="person"><label><input type="checkbox" data-index="${i}"> ${esc(s.name)}</label></div>`).join('')
+    : 'Aucun élève trouvé.';
+ })
+ .catch(e=>document.getElementById('students').textContent='Erreur : '+e.message);
+
+function preparerMessages(){
+ const checked=[...document.querySelectorAll('input[type=checkbox]:checked')];
+ const box=document.getElementById('messages');
+ if(!checked.length){box.className='';box.innerHTML='<div class="warning">Aucun élève absent sélectionné.</div>';return;}
+
+ const groups=new Map();
+ const noPhone=[];
+ checked.forEach(cb=>{
+   const s=currentStudents[Number(cb.dataset.index)];
+   const phone=normalizePhone(s.phone);
+   if(!phone){noPhone.push(s.name);return;}
+   if(!groups.has(phone)) groups.set(phone,[]);
+   groups.get(phone).push(s.name);
+ });
+
+ const date=new Date().toLocaleDateString('fr-FR');
+ let html='<h3>Messages à envoyer</h3><div class="small">Un bouton par famille. Si plusieurs élèves ont le même numéro, ils sont regroupés dans le même message.</div>';
+ let n=0;
+ for(const [phone,names] of groups){
+   n++;
+   const noms=names.join(', ');
+   const message=names.length===1
+     ? `Bonjour,\nNous vous informons que ${names[0]} est noté(e) absent(e) aujourd'hui ${date}.\nMerci.`
+     : `Bonjour,\nNous vous informons que ${names.join(' et ')} sont notés absents aujourd'hui ${date}.\nMerci.`;
+   const url='https://wa.me/'+phone+'?text='+encodeURIComponent(message);
+   html+=`<div class="family" id="family-${n}"><strong>${esc(noms)}</strong><span>${esc(phone)}</span><a class="wa-btn" href="${url}" target="_blank" rel="noopener" onclick="markSent(${n},this)">Ouvrir WhatsApp</a></div>`;
+ }
+ if(noPhone.length) html+=`<div class="warning"><strong>Numéro manquant :</strong> ${esc(noPhone.join(', '))}</div>`;
+ box.className='';box.innerHTML=html;
+ box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function markSent(n,a){
+ const card=document.getElementById('family-'+n);
+ card.classList.add('sent');
+ a.textContent='Rouvrir WhatsApp';
+}
+</script>
+</body>
+</html>
